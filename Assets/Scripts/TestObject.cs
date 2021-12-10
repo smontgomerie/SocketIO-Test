@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Threading;
 using Socket.Quobject.EngineIoClientDotNet.Modules;
 using Socket.Quobject.EngineIoClientDotNet.Thread;
 using Socket.Quobject.SocketIoClientDotNet.Client;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
 using Object = UnityEngine.Object;
@@ -15,6 +17,7 @@ public class TestObject : MonoBehaviour
 
     public GameObject TextPrefab;
     public Transform ListViewArea;
+    public GameObject Cube;
     SynchronizationContext syncContext;
 
     private void Awake()
@@ -26,6 +29,37 @@ public class TestObject : MonoBehaviour
         if (exists == null)
         {
             new GameObject(nameof(ExecuteOnMainThread)).AddComponent<ExecuteOnMainThread>();
+        }
+
+#if  UNITY_EDITOR
+        EditorApplication.playModeStateChanged += HandleOnPlayModeChanged;
+#endif
+
+        Application.SetStackTraceLogType(LogType.Log, StackTraceLogType.None);
+    }
+
+#if UNITY_EDITOR
+
+    private void HandleOnPlayModeChanged(PlayModeStateChange obj)
+    {
+        if (obj == PlayModeStateChange.ExitingPlayMode)
+        {
+            ClearItems();
+        }
+    }
+#endif
+
+    private void ClearItems()
+    {
+        foreach (Transform child in ListViewArea.transform)
+        {
+            GameObject.Destroy(child.gameObject);
+        }
+
+        int childs = ListViewArea.transform.childCount;
+        for (int i = childs - 1; i > 0; i--)
+        {
+            GameObject.Destroy(ListViewArea.transform.GetChild(i).gameObject);
         }
     }
 
@@ -60,6 +94,23 @@ public class TestObject : MonoBehaviour
 
             LogItem(data as string);
         });
+        
+        socket.On("set value", data =>
+        {
+            Debug.Log("set value " + data);
+            ExecuteOnMainThread.RunOnMainThread(() =>
+            {
+                var transformLocalScale = Cube.transform.localScale;
+                float result = 1;
+                if (float.TryParse(data as string, out result))
+                {
+                    transformLocalScale.y = result;
+                    Cube.transform.localScale = transformLocalScale;
+                }
+            });
+        });
+        
+        
 
         socket.On(QSocket.EVENT_DISCONNECT, () =>
         {
@@ -67,11 +118,23 @@ public class TestObject : MonoBehaviour
             LogItem("Disconnected");
         });
 
-        socket.On(QSocket.EVENT_CONNECT_ERROR, () => { Debug.Log("EVENT_CONNECT_ERROR"); });
+        socket.On(QSocket.EVENT_CONNECT_ERROR, () =>
+        {
+            Debug.Log("EVENT_CONNECT_ERROR");
+            LogItem("EVENT_CONNECT_ERROR");
+        });
 
-        socket.On(QSocket.EVENT_RECONNECTING, () => { Debug.Log("EVENT_RECONNECTING"); });
+        socket.On(QSocket.EVENT_RECONNECTING, () =>
+        {
+            Debug.Log("EVENT_RECONNECTING");
+            LogItem("Reconnecting");
+        });
 
-        socket.On(QSocket.EVENT_CONNECT_TIMEOUT, () => { Debug.Log("EVENT_CONNECT_TIMEOUT"); });
+        socket.On(QSocket.EVENT_CONNECT_TIMEOUT, () =>
+        {
+            Debug.Log("EVENT_CONNECT_TIMEOUT");
+            LogItem("ConnectTimeout");
+        });
 
         socket.On(QSocket.EVENT_ERROR, (err) => { Debug.LogException(err as Exception); });
 
@@ -89,23 +152,35 @@ public class TestObject : MonoBehaviour
 
 
         socket.Connect();
+
+        ClearItems();
     }
 
     private void LogItem(string data)
     {
 
 // On your worker thread
-        syncContext.Post(_ =>
+        ExecuteOnMainThread.RunOnMainThread(() =>
         {
             // This code here will run on the main thread
             GameObject o = Instantiate(TextPrefab, ListViewArea, false);
             o.GetComponent<Text>().text = data;
             o.SetActive(true);
-        }, null);
+            
+            RectTransform rt = ListViewArea.GetComponent<RectTransform>();
+            var rtSizeDelta = rt.sizeDelta;
+            rtSizeDelta.y = 30 * ListViewArea.childCount;
+            rt.sizeDelta = rtSizeDelta;
+            
+            FindObjectOfType<ScrollRect>().normalizedPosition = new Vector2(0, 0);
+        });
     }
 
     private void OnDestroy()
-    {
+    {    
         socket.Disconnect();
+        
+        ClearItems();
     }
+
 }

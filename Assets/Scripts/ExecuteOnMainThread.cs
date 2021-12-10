@@ -9,17 +9,31 @@ public class ExecuteOnMainThread : MonoBehaviour {
 
     void Update()
     {
-        if(!Queue.IsEmpty)
+        Debug.Log("Update");
+        lock (Queue)
         {
-            while(Queue.TryDequeue(out var action))
+            if(!Queue.IsEmpty)
             {
-                action?.Invoke();
+                if (Queue.TryDequeue(out var action))
+                {
+                    try
+                    {
+                        action?.Invoke();
+                    }
+                    catch (Exception e)
+                    {
+                        Debug.LogException(e);
+                    }
+                }
             }
         }
     }
 
     public static void RunOnMainThread(Action action)
     {
-        Queue.Enqueue(action);
+        lock (Queue)
+        {
+            Queue.Enqueue(action);            
+        }
     }
 }

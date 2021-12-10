@@ -225,7 +225,21 @@ namespace Socket.Quobject.EngineIoClientDotNet.Client {
           logger.Info(string.Format("socket received: type '{0}', data '{1}'", (object) packet.Type, packet.Data));
           this.Emit(EVENT_PACKET, (object) packet);
           if (packet.Type == Packet.OPEN)
-            this.OnHandshake(new HandshakeData((string) packet.Data));
+          {
+            HandshakeData handshakeData;
+            try
+            {
+              if (packet.Data != null)
+              {
+                handshakeData = new HandshakeData((string) packet.Data);
+                this.OnHandshake(handshakeData);  
+              }
+            }
+            catch (Exception e)
+            {
+              UnityEngine.Debug.LogException(e);
+            }
+          }
           else if (packet.Type == Packet.PONG)
             this.SetPing();
           else if (packet.Type == Packet.ERROR) {

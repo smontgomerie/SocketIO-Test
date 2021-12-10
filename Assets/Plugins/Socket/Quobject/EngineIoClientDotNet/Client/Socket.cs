@@ -243,8 +243,7 @@ namespace Socket.Quobject.EngineIoClientDotNet.Client {
       }
       catch (Exception e)
       {
-        Console.WriteLine(e);
-        throw;
+        UnityEngine.Debug.LogException(e);
       }
     }
 
@@ -634,6 +633,7 @@ namespace Socket.Quobject.EngineIoClientDotNet.Client {
           LogManager log = LogManager.GetLogger(Global.CallerName("", 0, ""));
           Packet packet = (Packet) args[0];
           if (Packet.PONG == packet.Type && "probe" == (string) packet.Data) {
+            this._onTransportOpenListener.Parameters.Socket.PingTimeoutTimer?.Stop();
             this._onTransportOpenListener.Parameters.Socket.Upgrading = true;
             this._onTransportOpenListener.Parameters.Socket.Emit(Socket.EVENT_UPGRADING,
               (object) this._onTransportOpenListener.Parameters.Transport[0]);

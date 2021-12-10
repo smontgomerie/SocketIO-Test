@@ -310,8 +310,7 @@ namespace Socket.Quobject.EngineIoClientDotNet.Client.Transports {
             }
             catch (Exception e)
             {
-              Debug.LogError(e);
-              throw;
+              this.OnError(e);
             }
           }));
         }

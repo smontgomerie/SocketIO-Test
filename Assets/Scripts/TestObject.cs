@@ -15,9 +15,13 @@ public class TestObject : MonoBehaviour
 
     public GameObject TextPrefab;
     public Transform ListViewArea;
+    SynchronizationContext syncContext;
 
     private void Awake()
     {
+        // On main thread, during initialization:
+        syncContext = System.Threading.SynchronizationContext.Current;
+
         var exists = GameObject.Find(nameof(ExecuteOnMainThread));
         if (exists == null)
         {
@@ -89,13 +93,15 @@ public class TestObject : MonoBehaviour
 
     private void LogItem(string data)
     {
-        ExecuteOnMainThread.RunOnMainThread(() =>
-            {
-                GameObject o = Instantiate(TextPrefab, ListViewArea, false);
-                o.GetComponent<Text>().text = data;
-                o.SetActive(true);
-            }
-        );
+
+// On your worker thread
+        syncContext.Post(_ =>
+        {
+            // This code here will run on the main thread
+            GameObject o = Instantiate(TextPrefab, ListViewArea, false);
+            o.GetComponent<Text>().text = data;
+            o.SetActive(true);
+        }, null);
     }
 
     private void OnDestroy()

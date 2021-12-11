@@ -9,7 +9,7 @@ public class ExecuteOnMainThread : MonoBehaviour {
 
     void Update()
     {
-        Debug.Log("Update");
+  //      Debug.Log("Update");
         lock (Queue)
         {
             if(!Queue.IsEmpty)

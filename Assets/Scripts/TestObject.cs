@@ -151,7 +151,7 @@ public class TestObject : MonoBehaviour
         });
 
 
-        socket.Connect();
+        // socket.Connect();
 
         ClearItems();
     }

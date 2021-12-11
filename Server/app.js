@@ -27,16 +27,20 @@ io.use((socket, next) => {
 io.on('connection', socket => {
 
     console.log("hooking up onMessage")
-    httpServer.registerCallback(socket.id, (message) => {
-        console.log("socket.emit web message " + message)
-        if ( message.startsWith("set value"))
-        {
-            socket.emit("set value", message.substr("set value ".length));
+    httpServer.registerCallback(socket.id, (type, message) => {
+        if (type == 'chat') {
+            console.log("socket.emit web message " + message)
+            if (message.startsWith("set value")) {
+                socket.emit("set value", message.substr("set value ".length));
+            } else {
+                socket.emit("web message", message);
+                socket.emit("chat", message);
+            }
         }
-        else 
+        else if ( type == 'slider')
         {
-            socket.emit("web message", message);
-            socket.emit("chat", message);
+            console.log("socket.emit slider message " + message)
+            socket.emit("set value", message);
         }
     });
 
@@ -157,7 +161,7 @@ io.on('connection', socket => {
 
     socket.on("sever disconnect", close => {
         httpServer.removeCallback(close.id);
-        
+
         socket.disconnect(close)
     });
 });

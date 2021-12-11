@@ -1,3 +1,5 @@
+// Connects to browser UI
+
 const express = require('express');
 const app = express();
 const http = require('http');
@@ -46,9 +48,16 @@ io.on('connection', (socket) => {
         io.emit('chat message', msg);
         for(var id in callbacks) {
             let cb = callbacks[id];
-            cb(msg);
+            cb('chat', msg);
         }
     });
+    
+    socket.on('slider', msg => {
+        for(var id in callbacks) {
+            let cb = callbacks[id];
+            cb('slider', msg);
+        }
+    })
 
 });
 

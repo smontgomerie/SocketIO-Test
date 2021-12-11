@@ -31,7 +31,7 @@ public class TestObject : MonoBehaviour
             new GameObject(nameof(ExecuteOnMainThread)).AddComponent<ExecuteOnMainThread>();
         }
 
-#if  UNITY_EDITOR
+#if UNITY_EDITOR
         EditorApplication.playModeStateChanged += HandleOnPlayModeChanged;
 #endif
 
@@ -94,7 +94,7 @@ public class TestObject : MonoBehaviour
 
             LogItem(data as string);
         });
-        
+
         socket.On("set value", data =>
         {
             Debug.Log("set value " + data);
@@ -102,15 +102,37 @@ public class TestObject : MonoBehaviour
             {
                 var transformLocalScale = Cube.transform.localScale;
                 float result = 1;
-                if (float.TryParse(data as string, out result))
+                bool set = false;
+                switch (data)
+                {
+                    case string t1:
+                        if (float.TryParse(t1, out result))
+                        {
+                            set = true;
+                        }
+                        break;
+                    case int t1:
+                        result = t1;
+                        set = true;
+                        break;
+                    case float t2:
+                        result = t2;
+                        set = true;
+                        break;
+                    case long t3:
+                        result = t3;
+                        set = true;
+                        break;
+                }
+
+                if (set)
                 {
                     transformLocalScale.y = result;
-                    Cube.transform.localScale = transformLocalScale;
+                    Cube.transform.localScale = transformLocalScale;                    
                 }
             });
         });
-        
-        
+
 
         socket.On(QSocket.EVENT_DISCONNECT, () =>
         {
@@ -158,7 +180,6 @@ public class TestObject : MonoBehaviour
 
     private void LogItem(string data)
     {
-
 // On your worker thread
         ExecuteOnMainThread.RunOnMainThread(() =>
         {
@@ -166,21 +187,20 @@ public class TestObject : MonoBehaviour
             GameObject o = Instantiate(TextPrefab, ListViewArea, false);
             o.GetComponent<Text>().text = data;
             o.SetActive(true);
-            
+
             RectTransform rt = ListViewArea.GetComponent<RectTransform>();
             var rtSizeDelta = rt.sizeDelta;
             rtSizeDelta.y = 30 * ListViewArea.childCount;
             rt.sizeDelta = rtSizeDelta;
-            
+
             FindObjectOfType<ScrollRect>().normalizedPosition = new Vector2(0, 0);
         });
     }
 
     private void OnDestroy()
-    {    
+    {
         socket.Disconnect();
-        
+
         ClearItems();
     }
-
 }

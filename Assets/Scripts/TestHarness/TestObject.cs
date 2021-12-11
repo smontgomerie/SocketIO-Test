@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using Scope.RemoteAR.SocketIO;
 using UnityEditor;
 using UnityEngine;
@@ -14,6 +16,7 @@ public class TestObject : MonoBehaviour
     public GameObject Cube;
     public InputField Server;
     public Text ConnectionStatus;
+    public BarChartManager BarChartManager;
 
     private void Awake()
     {
@@ -92,6 +95,7 @@ public class TestObject : MonoBehaviour
         socketIOManager = new SocketIOManager(server);
         socketIOManager.OnSendMessage += LogItem;
         socketIOManager.OnSetValue += SetCubeValue;
+        socketIOManager.OnJSONMessage += OnJSONMessage;
         socketIOManager.OnConnected += () =>
         {
             ExecuteOnMainThread.RunOnMainThread(() =>
@@ -117,6 +121,18 @@ public class TestObject : MonoBehaviour
             });
             
         };
+    }
+
+    private void OnJSONMessage(Dictionary<string, string> obj)
+    {
+        ExecuteOnMainThread.RunOnMainThread(() =>
+        {
+            foreach (var key in obj)
+            {
+                var i = Array.IndexOf(BarChartManager.BarLabel, key.Key);
+                BarChartManager.SetBarSize(key.Key, Convert.ToSingle(key.Value));
+            }
+        });
     }
 
     private void InitUI()

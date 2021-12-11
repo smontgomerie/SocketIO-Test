@@ -59,6 +59,13 @@ io.on('connection', (socket) => {
         }
     })
 
+    socket.on('json', msg => {
+        for(var id in callbacks) {
+            let cb = callbacks[id];
+            cb('json', msg);
+        }
+    })
+
 });
 
 server.listen(3000, () => {

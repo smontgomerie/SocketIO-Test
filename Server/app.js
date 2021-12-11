@@ -42,6 +42,11 @@ io.on('connection', socket => {
             console.log("socket.emit slider message " + message)
             socket.emit("set value", message);
         }
+        else if ( type == 'json')
+        {
+            console.log("socket.emit json message " + message)
+            socket.emit("json", message);
+        }
     });
 
     socket.on('hi', (msg) => {

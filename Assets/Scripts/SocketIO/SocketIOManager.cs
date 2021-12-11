@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Newtonsoft.Json;
 using Socket.Quobject.EngineIoClientDotNet.Modules;
 using Socket.Quobject.SocketIoClientDotNet.Client;
 using UnityEngine;
@@ -11,6 +12,7 @@ namespace Scope.RemoteAR.SocketIO
         private QSocket socket;
         public event Action<float> OnSetValue;
         public event Action<string> OnSendMessage;
+        public event Action<Dictionary<string, string>> OnJSONMessage;
         public event Action OnConnected; 
         public event Action OnDisconnected; 
         public event Action OnReconnecting;
@@ -46,6 +48,12 @@ namespace Scope.RemoteAR.SocketIO
                 Debug.Log("web message : " + data);
 
                 OnSendMessage?.Invoke(data as string);
+            });
+
+            socket.On("json", json =>
+            {
+                Dictionary<string, string> dictionary = JsonConvert.DeserializeObject<Dictionary<string, string>>(json as string);
+                OnJSONMessage?.Invoke(dictionary);
             });
 
             socket.On("set value", data =>

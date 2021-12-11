@@ -64,6 +64,13 @@
             top: 10px;
             width: 200px;
         }
+
+        #temps {
+            position: fixed;
+            right: 100px;
+            top: 100px;
+            width: 200px;
+        }
     </style>
     <script src="/socket.io/socket.io.js"></script>
 
@@ -72,6 +79,8 @@
     <script src="https://code.jquery.com/jquery-3.6.0.js"></script>
     <script src="https://code.jquery.com/ui/1.13.0/jquery-ui.js"></script>
     <script>
+        var months = ["jan", "feb", "mar", "apr", "may", "jun"];
+
         $(function () {
             $("#slider").slider({
                 min: 0,
@@ -80,6 +89,28 @@
                     socket.emit('slider', ui.value);
                 },
             });
+
+            var json = months.reduce(function (map, obj) {
+                map[obj] = 0;
+                return map;
+            }, {});
+
+            for (var i = 0; i < months.length; i++) {
+                $("#" + months[i])
+                    .data('name', months[i])
+                    .append(months[i])
+                    .slider({
+                        min: 0,
+                        max: 50,
+                        slide: function (event, ui) {
+                            var target = event.target.id;
+                            json[target] = ui.value;
+                            console.log(JSON.stringify(json));
+                            socket.emit('json', JSON.stringify(json));
+                        },
+                    });
+            }
+
         });
     </script>
 
@@ -97,6 +128,21 @@
 <div id="slider_wrapper">
     Box height:
     <div id="slider"></div>
+</div>
+
+<div id="temps">
+    Months:
+    <div>
+        <div id="jan"></div>
+    </div>
+    <div>
+        <div id="feb"></div>
+    </div>
+
+    <div id="mar"></div>
+    <div id="apr"></div>
+    <div id="may"></div>
+    <div id="jun"></div>
 </div>
 
 <script>

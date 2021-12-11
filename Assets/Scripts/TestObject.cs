@@ -133,10 +133,9 @@ public class TestObject : MonoBehaviour
             });
         });
 
-
-        socket.On(QSocket.EVENT_DISCONNECT, () =>
+        socket.On(QSocket.EVENT_DISCONNECT, (obj) =>
         {
-            Debug.Log("EVENT_DISCONNECT");
+            Debug.Log("EVENT_DISCONNECT reason: " + obj);
             LogItem("Disconnected");
         });
 

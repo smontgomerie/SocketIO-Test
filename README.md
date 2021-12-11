@@ -10,8 +10,8 @@ Simple NodeJS server with HTTP backend
 `npm start`
 
 #### Unity
-- Add TestObject.cs to a GameObject
-- Connect to port 11102 (defined in app.js)
+- Add SceneController.cs to a GameObject
+- Fill in server box 
 
 #### Web
 - Simple web interface to send commands to Unity project

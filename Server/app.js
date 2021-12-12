@@ -24,8 +24,10 @@ io.use((socket, next) => {
     }
 })
 
-io.on('connection', socket => {
+var cachedJson = null;
 
+io.on('connection', socket => {
+    
     console.log("hooking up onMessage")
     httpServer.registerCallback(socket.id, (type, message) => {
         if (type == 'chat') {
@@ -46,6 +48,9 @@ io.on('connection', socket => {
         {
             console.log("socket.emit json message " + message)
             socket.emit("json", message);
+
+            // Cache it
+            cachedJson = message;
         }
     });
 
@@ -61,6 +66,9 @@ io.on('connection', socket => {
     socket.on('welcome', () => {
         console.log("welcome " + socket.id)
         socket.emit('welcome', Buffer.from("welcome " + socket.id, 'utf8'), Buffer.from("test", 'utf8'));
+        
+        // Upon first logging in fire the last JSON event so it receives fresh data. Hacky.
+        socket.emit('json', cachedJson)
     });
 
     socket.on("no params", () => {

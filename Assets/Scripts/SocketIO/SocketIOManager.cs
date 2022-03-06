@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Socket.Quobject.EngineIoClientDotNet.Modules;
 using Socket.Quobject.SocketIoClientDotNet.Client;
 using UnityEngine;
@@ -12,7 +13,7 @@ namespace Scope.RemoteAR.SocketIO
         private QSocket socket;
         public event Action<float> OnSetValue;
         public event Action<string> OnSendMessage;
-        public event Action<Dictionary<string, string>> OnJSONMessage;
+        public event Action<JObject> OnJSONMessage;
         public event Action OnConnected; 
         public event Action OnDisconnected; 
         public event Action OnReconnecting;

@@ -52,8 +52,9 @@ namespace Scope.RemoteAR.SocketIO
 
             socket.On("json", json =>
             {
+                var jObject = JObject.Parse(json as string);
                 Dictionary<string, string> dictionary = JsonConvert.DeserializeObject<Dictionary<string, string>>(json as string);
-                OnJSONMessage?.Invoke(dictionary);
+                OnJSONMessage?.Invoke(jObject);
             });
 
             socket.On("set value", data =>

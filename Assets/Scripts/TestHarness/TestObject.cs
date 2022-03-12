@@ -1,14 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using Scope.RemoteAR.SocketIO;
+using System.Data.Common;
+using GraphQL;
+using GraphQL.Client.Abstractions.Websocket;
+using GraphQL.Client.Http;
+using GraphQL.Client.Serializer.Newtonsoft;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
 
 public class TestObject : MonoBehaviour
 {
-    SocketIOManager socketIOManager;
+    GraphQLRequest graphQlRequest;
     private ConnectionManager _connectionManager;
 
     public GameObject TextPrefab;
@@ -81,10 +84,10 @@ public class TestObject : MonoBehaviour
 
         _connectionManager.OnServerChange += server =>
         {
-            if (socketIOManager != null)
-            {
-                socketIOManager.Disconnect();
-            }
+            // if (graphQlRequest != null)
+            // {
+            //     graphQlRequest.Disconnect();
+            // }
 
             InitSocketManager(server);
         };
@@ -92,36 +95,98 @@ public class TestObject : MonoBehaviour
 
     private void InitSocketManager(string server)
     {
-        socketIOManager = new SocketIOManager(server);
-        socketIOManager.OnSendMessage += LogItem;
-        socketIOManager.OnSetValue += SetCubeValue;
-        socketIOManager.OnJSONMessage += OnJSONMessage;
-        socketIOManager.OnConnected += () =>
+        var client = new GraphQLHttpClient(server, new NewtonsoftJsonSerializer()); // todo importing the dll for the newtonsoft shit is fucking up somehow... idk if it matters? but it's ugly
+        client.WebsocketConnectionState.Subscribe(ConnectionStateChange);
+        
+        var request = new GraphQLRequest
         {
-            ExecuteOnMainThread.RunOnMainThread(() =>
-            {
-                ConnectionStatus.text = "Connected";
-                ConnectionStatus.color = Color.green;
-            });
+            Query = @"
+    subscription {
+        greetings
+    }"
         };
-        socketIOManager.OnDisconnected += () =>
-        {
-            ExecuteOnMainThread.RunOnMainThread(() =>
-            {
-                ConnectionStatus.text = "Disconnected";
-                ConnectionStatus.color = Color.red;
-            });
-        };
-        socketIOManager.OnReconnecting += () =>
-        {
-            ExecuteOnMainThread.RunOnMainThread(() =>
-            {
-                ConnectionStatus.text = "Reconnecting...";
-                ConnectionStatus.color = Color.yellow;
-            });
-            
-        };
+        
+        IObservable<GraphQLResponse<UserJoinedSubscriptionResult>> subscriptionStream 
+            = client.CreateSubscriptionStream<UserJoinedSubscriptionResult>(request);
+
+        subscriptionStream.Subscribe(new TemperatureReporter());
+
+        // graphQlRequest.OnSendMessage += LogItem;
+        // graphQlRequest.OnSetValue += SetCubeValue;
+        // graphQlRequest.OnJSONMessage += OnJSONMessage;
+        // graphQlRequest.OnConnected += () =>
+        // {
+        //     ExecuteOnMainThread.RunOnMainThread(() =>
+        //     {
+        //         ConnectionStatus.text = "Connected";
+        //         ConnectionStatus.color = Color.green;
+        //     });
+        // };
+        // graphQlRequest.OnDisconnected += () =>
+        // {
+        //     ExecuteOnMainThread.RunOnMainThread(() =>
+        //     {
+        //         ConnectionStatus.text = "Disconnected";
+        //         ConnectionStatus.color = Color.red;
+        //     });
+        // };
+        // graphQlRequest.OnReconnecting += () =>
+        // {
+        //     ExecuteOnMainThread.RunOnMainThread(() =>
+        //     {
+        //         ConnectionStatus.text = "Reconnecting...";
+        //         ConnectionStatus.color = Color.yellow;
+        //     });
+        //     
+        // };
     }
+
+    private void ConnectionStateChange(GraphQLWebsocketConnectionState obj)
+    {
+        ExecuteOnMainThread.RunOnMainThread(() =>
+        {
+            switch (obj)
+            {
+                case GraphQLWebsocketConnectionState.Connected:
+                    ConnectionStatus.text = nameof(GraphQLWebsocketConnectionState.Connected);
+                    ConnectionStatus.color = Color.green;
+                    break;
+                case GraphQLWebsocketConnectionState.Disconnected:
+                    ConnectionStatus.text = nameof(GraphQLWebsocketConnectionState.Disconnected);
+                    ConnectionStatus.color = Color.red;
+                    break;
+                case GraphQLWebsocketConnectionState.Connecting:
+                    ConnectionStatus.text = nameof(GraphQLWebsocketConnectionState.Connecting);
+                    ConnectionStatus.color = Color.yellow;
+                    break;
+
+            }
+        });
+
+    }
+
+    public class TemperatureReporter : IObserver<GraphQLResponse<UserJoinedSubscriptionResult>>
+    {
+        public void OnCompleted()
+        {
+            Debug.Log("Completed");
+        }
+
+        public void OnError(Exception error)
+        {
+            Debug.LogException(error);
+        }
+
+        public void OnNext(GraphQLResponse<UserJoinedSubscriptionResult> value)
+        {
+            ExecuteOnMainThread.RunOnMainThread(() =>
+            {
+                Debug.Log("Here");
+                Debug.Log(value?.Data?.Greetings);
+            });
+        }
+    }
+
 
     private void OnJSONMessage(Dictionary<string, string> obj)
     {
@@ -192,8 +257,13 @@ public class TestObject : MonoBehaviour
 
     private void OnDestroy()
     {
-        socketIOManager.Disconnect();
+        // graphQlRequest.Disconnect();
 
         ClearItems();
     }
+}
+
+public class UserJoinedSubscriptionResult
+{
+    public string Greetings;
 }

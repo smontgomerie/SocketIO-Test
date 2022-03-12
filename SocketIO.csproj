@@ -386,9 +386,6 @@
  <Reference Include="UnityEditor.iOS.Extensions">
  <HintPath>/Applications/Unity/Hub/Editor/2019.4.26f1/PlaybackEngines/iOSSupport/UnityEditor.iOS.Extensions.dll</HintPath>
  </Reference>
- <Reference Include="Newtonsoft.Json">
- <HintPath>/Users/scott/Development/Scope/SocketIO-Test/Assets/Plugins/Newtonsoft.Json.dll</HintPath>
- </Reference>
  <Reference Include="Unity.Analytics.Tracker">
  <HintPath>/Users/scott/Development/Scope/SocketIO-Test/Library/PackageCache/com.unity.analytics@3.3.5/Unity.Analytics.Tracker.dll</HintPath>
  </Reference>
@@ -397,6 +394,24 @@
  </Reference>
  <Reference Include="Unity.Analytics.StandardEvents">
  <HintPath>/Users/scott/Development/Scope/SocketIO-Test/Library/PackageCache/com.unity.analytics@3.3.5/AnalyticsStandardEvents/Unity.Analytics.StandardEvents.dll</HintPath>
+ </Reference>
+ <Reference Include="GraphQL.Client.Abstractions.Websocket 1">
+ <HintPath>/Users/scott/Development/Scope/SocketIO-Test/Assets/Plugins/GraphQL/GraphQL.Client.Abstractions.Websocket 1.dll</HintPath>
+ </Reference>
+ <Reference Include="GraphQL.Client.Abstractions">
+ <HintPath>/Users/scott/Development/Scope/SocketIO-Test/Assets/Plugins/GraphQL/GraphQL.Client.Abstractions.dll</HintPath>
+ </Reference>
+ <Reference Include="GraphQL.Client">
+ <HintPath>/Users/scott/Development/Scope/SocketIO-Test/Assets/Plugins/GraphQL/GraphQL.Client.dll</HintPath>
+ </Reference>
+ <Reference Include="GraphQL.Client.Serializer.Newtonsoft">
+ <HintPath>/Users/scott/Development/Scope/SocketIO-Test/Assets/Plugins/GraphQL/GraphQL.Client.Serializer.Newtonsoft.dll</HintPath>
+ </Reference>
+ <Reference Include="GraphQL.Client.Abstractions.Websocket">
+ <HintPath>/Users/scott/Development/Scope/SocketIO-Test/Assets/Plugins/GraphQL/GraphQL.Client.Abstractions.Websocket.dll</HintPath>
+ </Reference>
+ <Reference Include="GraphQL.Primitives">
+ <HintPath>/Users/scott/Development/Scope/SocketIO-Test/Assets/Plugins/GraphQL/GraphQL.Primitives.dll</HintPath>
  </Reference>
  <Reference Include="UnityEditor.iOS.Extensions.Xcode">
  <HintPath>/Applications/Unity/Hub/Editor/2019.4.26f1/PlaybackEngines/iOSSupport/UnityEditor.iOS.Extensions.Xcode.dll</HintPath>

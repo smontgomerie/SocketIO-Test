@@ -1,4 +1,6 @@
 // @ts-check
+const httpServer = require("./httpServer.cjs");
+
 const { createServer } = require("http");
 const express = require("express");
 const { execute, subscribe } = require("graphql");
@@ -11,7 +13,7 @@ const { makeExecutableSchema } = require("@graphql-tools/schema");
     const PORT = 4000;
     const pubsub = new PubSub();
     const app = express();
-    const httpServer = createServer(app);
+    const websocketServer = createServer(app);
 
     // Schema definition
     const typeDefs = gql`
@@ -22,7 +24,7 @@ const { makeExecutableSchema } = require("@graphql-tools/schema");
 
         type Subscription {
             numberIncremented: Int
-            greeting: String
+            greetings: String
         }
     `;
 
@@ -40,13 +42,13 @@ const { makeExecutableSchema } = require("@graphql-tools/schema");
             numberIncremented: {
                 subscribe: () => {
                     console.log("subscribe");
-                    pubsub.asyncIterator(["NUMBER_INCREMENTED"])
+                    return pubsub.asyncIterator(["NUMBER_INCREMENTED"])
                 },
             },
-            greeting : {
+            greetings : {
                 subscribe: () => {
-                    console.log("subscribe");
-                    pubsub.asyncIterator(["GREETING"])
+                    console.log("subscribe to greetings");
+                    return pubsub.asyncIterator(["GREETINGS"])
                 },
             },
         },
@@ -71,10 +73,10 @@ const { makeExecutableSchema } = require("@graphql-tools/schema");
 
     SubscriptionServer.create(
         { schema, execute, subscribe },
-        { server: httpServer, path: server.graphqlPath }
+        { server: websocketServer, path: server.graphqlPath }
     );
 
-    httpServer.listen(PORT, () => {
+    websocketServer.listen(PORT, () => {
         console.log(
             `🚀 Query endpoint ready at http://localhost:${PORT}${server.graphqlPath}`
         );
@@ -89,6 +91,12 @@ const { makeExecutableSchema } = require("@graphql-tools/schema");
         pubsub.publish("NUMBER_INCREMENTED", { numberIncremented: currentNumber });
         setTimeout(incrementNumber, 1000);
     }
+    function sayHello()
+    {
+        pubsub.publish("GREETINGS", { greetings: "Hello world!" + currentNumber });
+        setTimeout(sayHello, 1000);
+    }
     // Start incrementing
     incrementNumber();
+    sayHello();
 })();

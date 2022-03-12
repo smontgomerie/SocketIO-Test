@@ -1,13 +1,13 @@
 // @ts-check
 const httpServer = require("./httpServer.cjs");
 
-const { createServer } = require("http");
+const {createServer} = require("http");
 const express = require("express");
-const { execute, subscribe } = require("graphql");
-const { ApolloServer, gql } = require("apollo-server-express");
-const { PubSub } = require("graphql-subscriptions");
-const { SubscriptionServer } = require("subscriptions-transport-ws");
-const { makeExecutableSchema } = require("@graphql-tools/schema");
+const {execute, subscribe} = require("graphql");
+const {ApolloServer, gql} = require("apollo-server-express");
+const {PubSub} = require("graphql-subscriptions");
+const {SubscriptionServer} = require("subscriptions-transport-ws");
+const {makeExecutableSchema} = require("@graphql-tools/schema");
 
 (async () => {
     const PORT = 4000;
@@ -45,7 +45,7 @@ const { makeExecutableSchema } = require("@graphql-tools/schema");
                     return pubsub.asyncIterator(["NUMBER_INCREMENTED"])
                 },
             },
-            greetings : {
+            greetings: {
                 subscribe: () => {
                     console.log("subscribe to greetings");
                     return pubsub.asyncIterator(["GREETINGS"])
@@ -54,26 +54,38 @@ const { makeExecutableSchema } = require("@graphql-tools/schema");
         },
     };
 
-    const schema = makeExecutableSchema({ typeDefs, resolvers });
+    const schema = makeExecutableSchema({typeDefs, resolvers});
 
-    const server = new ApolloServer({
-        schema,
-        subscriptions: {
+    const server = new ApolloServer({schema});
+    await server.start();
+    server.applyMiddleware({app});
+
+    SubscriptionServer.create(
+        {
+            schema, execute, subscribe,
             onConnect: (connectionParams, webSocket, context) => {
                 console.log('Connected!')
             },
+            onOperation: (message, params, webSocket) => {
+                // Manipulate and return the params, e.g.
+                // params.context.randomId = uuid.v4();
+
+                // Or specify a schema override
+                // if (shouldOverrideSchema()) {
+                //     params.schema = newSchema;
+                // }
+
+                return params;
+            },
+            onOperationComplete: webSocket => {
+                // ...
+            },
             onDisconnect: (webSocket, context) => {
+                // ...
                 console.log('Disconnected!')
             },
-            // ...other options...
         },
-    });
-    await server.start();
-    server.applyMiddleware({ app });
-
-    SubscriptionServer.create(
-        { schema, execute, subscribe },
-        { server: websocketServer, path: server.graphqlPath }
+        {server: websocketServer, path: server.graphqlPath}
     );
 
     websocketServer.listen(PORT, () => {
@@ -86,16 +98,18 @@ const { makeExecutableSchema } = require("@graphql-tools/schema");
     });
 
     let currentNumber = 0;
+
     function incrementNumber() {
         currentNumber++;
-        pubsub.publish("NUMBER_INCREMENTED", { numberIncremented: currentNumber });
+        pubsub.publish("NUMBER_INCREMENTED", {numberIncremented: currentNumber});
         setTimeout(incrementNumber, 1000);
     }
-    function sayHello()
-    {
-        pubsub.publish("GREETINGS", { greetings: "Hello world!" + currentNumber });
+
+    function sayHello() {
+        pubsub.publish("GREETINGS", {greetings: "Hello world!" + currentNumber});
         setTimeout(sayHello, 1000);
     }
+
     // Start incrementing
     incrementNumber();
     sayHello();

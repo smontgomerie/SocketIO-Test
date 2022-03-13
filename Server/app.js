@@ -5,62 +5,17 @@ const {createServer} = require("http");
 const express = require("express");
 const {execute, subscribe} = require("graphql");
 const {ApolloServer, gql} = require("apollo-server-express");
-const {PubSub} = require("graphql-subscriptions");
 const {SubscriptionServer} = require("subscriptions-transport-ws");
 const {makeExecutableSchema} = require("@graphql-tools/schema");
-const {User, WebUser} = require("./user.js");
+const {User} = require("./user");
+const {typeDefs, pubsub, resolvers} = require("./schema.js");
+const {Result} = require("./src/generated/graphql");
 
 (async () => {
     const PORT = 4000;
-    const pubsub = new PubSub();
     const app = express();
     const websocketServer = createServer(app);
     const users = {};
-
-    // Schema definition
-    const typeDefs = gql`
-        type Query {
-            currentNumber: Int
-            hello: String
-        }
-        
-        type Result {
-            value: Int
-            slider: Int
-            json: String
-        }
-
-        type Subscription {
-            numberIncremented: Int
-            greetings: Result
-        }
-    `;
-
-    // Resolver map
-    const resolvers = {
-        Query: {
-            currentNumber() {
-                return currentNumber;
-            },
-            hello() {
-                return "Hello world!";
-            }
-        },
-        Subscription: {
-            numberIncremented: {
-                subscribe: () => {
-                    console.log("subscribe");
-                    return pubsub.asyncIterator(["NUMBER_INCREMENTED"])
-                },
-            },
-            greetings: {
-                subscribe: () => {
-                    console.log("subscribe to greetings");
-                    return pubsub.asyncIterator(["GREETINGS"])
-                },
-            },
-        },
-    };
 
     const schema = makeExecutableSchema({typeDefs, resolvers});
 
@@ -87,18 +42,20 @@ const {User, WebUser} = require("./user.js");
                     if (type == 'chat') {
                         console.log("socket.emit web message " + message)
                         if (message.startsWith("set value")) {
-                            socket.emit("set value", message.substr("set value ".length));
+                            // socket.emit("set value", message.substr("set value ".length));
+                            pubsub.publish("GREETINGS", {greetings: {value: message.substr("set value ".length), slider: null, json: null}});
                         } else {
-                            socket.emit("web message", message);
-                            socket.emit("chat", message);
+                            // socket.emit("web message", message);
+                            // socket.emit("chat", message);
+                            pubsub.publish("GREETINGS", {greetings: {value: "", slider: message, json: null}});
                         }
                     } else if (type == 'slider') {
                         console.log("socket.emit slider message " + message)
-                        pubsub.publish("GREETINGS", {greetings: {value: 0, slider: message, json: null}});
+                        pubsub.publish("GREETINGS", {greetings: {value: "", slider: message, json: null}});
                     } else if (type == 'json') {
                         console.log("socket.emit json message " + message)
                         // socket.emit("json", message);
-                        pubsub.publish("GREETINGS", {greetings: {value: 0, slider: 0, json: message}});
+                        pubsub.publish("GREETINGS", {greetings: {value: "", slider: 0, json: message}});
 
 
                         // Cache it
@@ -146,7 +103,7 @@ const {User, WebUser} = require("./user.js");
     }
 
     function sayHello() {
-        pubsub.publish("GREETINGS", {greetings: {value: 0, slider: 0, json: JSON.stringify({message: "Hello world!"})}});
+        pubsub.publish("GREETINGS", {greetings: {value: "", slider: 0, json: JSON.stringify({message: "Hello world!"})}});
         setTimeout(sayHello, 1000);
     }
 

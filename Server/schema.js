@@ -1,28 +1,48 @@
-import { GraphQLSchema, GraphQLObjectType, GraphQLString } from 'graphql';
+const {PubSub} = require("graphql-subscriptions");
+const {gql} = require("apollo-server-express");
+export const pubsub = new PubSub();
 
-export const schema = new GraphQLSchema({
-    query: new GraphQLObjectType({
-        name: 'Query',
-        fields: {
-            hello: {
-                type: GraphQLString,
-                resolve: () => 'world',
+// Schema definition
+export const typeDefs = gql`
+    type Query {
+        currentNumber: Int
+        hello: String
+    }
+
+    type Result {
+        value: String
+        slider: Int
+        json: String
+    }
+
+    type Subscription {
+        numberIncremented: Int
+        greetings: Result
+    }
+`;
+
+// Resolver map
+export const resolvers = {
+    Query: {
+        currentNumber() {
+            return currentNumber;
+        },
+        hello() {
+            return "Hello world!";
+        }
+    },
+    Subscription: {
+        numberIncremented: {
+            subscribe: () => {
+                console.log("subscribe");
+                return pubsub.asyncIterator(["NUMBER_INCREMENTED"])
             },
         },
-    }),
-    subscription: new GraphQLObjectType({
-        name: 'Subscription',
-        fields: {
-            greetings: {
-                type: GraphQLString,
-                subscribe: async function* () {
-                    console.log('subscribe ')
-
-                    for (const hi of ['Hi', 'Bonjour', 'Hola', 'Ciao', 'Zdravo']) {
-                        yield { greetings: hi };
-                    }
-                },
+        greetings: {
+            subscribe: () => {
+                console.log("subscribe to greetings");
+                return pubsub.asyncIterator(["GREETINGS"])
             },
         },
-    }),
-});
+    },
+};

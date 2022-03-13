@@ -1,10 +1,6 @@
-class User {
-  title: string;
+export type User = {
   id: number;
   description: string;
   data: string;
 }
 
-class WebUser extends User {
-
-}

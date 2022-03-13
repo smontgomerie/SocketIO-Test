@@ -9,8 +9,8 @@ const {execute, subscribe} = require("graphql");
 const {ApolloServer, gql} = require("apollo-server-express");
 const {SubscriptionServer} = require("subscriptions-transport-ws");
 const {makeExecutableSchema} = require("@graphql-tools/schema");
-const {User} = require("./user");
 
+import {User} from "./src/user";
 const {Result} = require("./src/generated/graphql");
 
 (async () => {
@@ -25,62 +25,105 @@ const {Result} = require("./src/generated/graphql");
   await server.start();
   server.applyMiddleware({app});
 
+  const validateToken = (authToken) => {
+    // ... validate token and return a Promise, rejects in case of an error
+    return new Promise<boolean>((resolve, reject) => {
+      resolve(true);
+      return true;
+    });
+  }
+
+  const findUser = (authToken) => {
+    return (tokenValidationResult) => {
+      // ... finds user by auth token and return a Promise, rejects in case of an error
+      return new Promise<User>((resolve, reject) => {
+        resolve(users[authToken] ||  {
+          id: authToken,
+          description: "",
+          data: ""
+        });
+      });
+    }
+  }
+
   SubscriptionServer.create(
     {
       schema, execute, subscribe,
       onConnect: (connectionParams, webSocket, context) => {
-        console.log('Connected! ' + webSocket.id);
-        const socket = {
-          id: 0
+        let authToken = connectionParams?.authToken || context?.request?.headers?.authorization;
+        console.log('Connected! ' + 'authToken: ' + authToken);
+
+        if (authToken) {
+          authToken = authToken.replace('Bearer ', '');
         }
 
-        httpServer.registerCallback(socket.id, (type, message) => {
-          const user = {
-            id: socket.id
-          };
+        if (authToken) {
+          return validateToken(authToken)
+            .then(findUser(authToken))
+            .then((user) => {
 
-          users[socket.id] ||= user;
-
-          if (type == 'chat') {
-            console.log("socket.emit web message " + message)
-            if (message.startsWith("set value")) {
-              // socket.emit("set value", message.substr("set value ".length));
-              const result = {
-                value: message.substr("set value ".length),
-                slider: null,
-                json: null
-              };
-              pubsub.publish("GREETINGS", {
-                greetings: result
-              });
-            } else {
-              // socket.emit("web message", message);
-              // socket.emit("chat", message);
-              pubsub.publish("GREETINGS", {greetings: {value: "", slider: message, json: null}});
-            }
-          } else if (type == 'slider') {
-            console.log("socket.emit slider message " + message)
-            pubsub.publish("GREETINGS", {
-              greetings: {
-                value: "",
-                slider: message,
-                json: null
+              const socket = {
+                id: 0
               }
+
+              httpServer.registerCallback(socket.id, (type, message) => {
+                const user: User = {
+                  id: authToken,
+                  description: "",
+                  data: ""
+                };
+
+                users[authToken] ||= user;
+
+                if (type == 'chat') {
+                  console.log("socket.emit web message " + message)
+                  if (message.startsWith("set value")) {
+                    // socket.emit("set value", message.substr("set value ".length));
+                    const result = {
+                      value: message.substr("set value ".length),
+                      slider: null,
+                      json: null
+                    };
+                    pubsub.publish("GREETINGS", {
+                      greetings: result
+                    });
+                  } else {
+                    // socket.emit("web message", message);
+                    // socket.emit("chat", message);
+                    pubsub.publish("GREETINGS", {greetings: {value: "", slider: message, json: null}});
+                  }
+                } else if (type == 'slider') {
+                  console.log("socket.emit slider message " + message)
+                  pubsub.publish("GREETINGS", {
+                    greetings: {
+                      value: "",
+                      slider: message,
+                      json: null
+                    }
+                  });
+                } else if (type == 'json') {
+                  console.log("socket.emit json message " + message)
+                  // socket.emit("json", message);
+                  pubsub.publish("GREETINGS", {
+                    greetings: {
+                      value: "",
+                      slider: 0,
+                      json: message
+                    }
+                  });
+
+
+                  // Cache it
+                  users[authToken].data = message;
+                }
+                return {
+                  currentUser: user,
+                };
+              });
             });
-          } else if (type == 'json') {
-            console.log("socket.emit json message " + message)
-            // socket.emit("json", message);
-            pubsub.publish("GREETINGS", {greetings: {
-                value: "",
-                slider: 0,
-                json: message
-              }});
+        }
 
-
-            // Cache it
-            users[socket.id].data = message;
-          }
-        });
+        throw new Error('Missing auth token!');
       },
       onOperation: (message, params, webSocket) => {
         // Manipulate and return the params, e.g.
@@ -91,12 +134,12 @@ const {Result} = require("./src/generated/graphql");
         //     params.schema = newSchema;
         // }
 
-        console.log('onOperation' +   message + ' params: ' + params + ' webSocket: ' + webSocket);
+        console.log('onOperation' + message + ' params: ' + params + ' webSocket: ' + webSocket);
 
         return params;
       },
       onOperationComplete: webSocket => {
-        console.log('onOperationComplete' +   webSocket);
+        console.log('onOperationComplete' + webSocket);
       },
       onDisconnect: (webSocket, context) => {
         // ...

@@ -1,6 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data.Common;
+using System.Net;
+using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
 using GraphQL;
 using GraphQL.Client.Abstractions.Websocket;
 using GraphQL.Client.Http;
@@ -9,6 +13,7 @@ using Newtonsoft.Json.Linq;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
+using Types = GraphQLCodeGen.Types;
 
 public class TestObject : MonoBehaviour
 {
@@ -94,14 +99,47 @@ public class TestObject : MonoBehaviour
         };
     }
 
+    public class MyHandler : HttpClientHandler
+    {
+        public string AuthToken { get; }
+
+        public MyHandler(string authToken)
+        {
+            AuthToken = authToken;
+        }
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", AuthToken);
+
+            return base.SendAsync(request, cancellationToken);
+        }
+    }
+
     private void InitSocketManager(string server)
     {
-        var client = new GraphQLHttpClient(server, new NewtonsoftJsonSerializer()); // todo importing the dll for the newtonsoft shit is fucking up somehow... idk if it matters? but it's ugly
+        var AuthToken = "abcd";
+        // var httpMessageHandler = new MyHandler(AuthToken);
+        // httpMessageHandler.Credentials = new NetworkCredential("test", "password");
+        GraphQLHttpClientOptions options = new GraphQLHttpClientOptions
+        {
+            EndPoint = new Uri(server),
+            // HttpMessageHandler = httpMessageHandler,
+            ConfigureWebsocketOptions =
+                (options) => { options.SetRequestHeader("Authorization", "Bearer " + AuthToken); }
+        };
+        // HttpClient httpClient = new HttpClient(httpMessageHandler);
+        // httpClient.DefaultRequestHeaders.Add("Authorization", "Bearer " + AuthToken);
+
+        var client =
+            new GraphQLHttpClient(options, new NewtonsoftJsonSerializer());
+        client.HttpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {AuthToken}");
         client.WebsocketConnectionState.Subscribe(ConnectionStateChange);
         
-        var request = new GraphQLRequest
-        {
-            Query = @"
+            var request = new GraphQLRequest
+            {
+                Query = @"
     subscription {
         greetings {
 value
@@ -109,9 +147,9 @@ slider
 json
     }
     }"
-        };
-        
-        IObservable<GraphQLResponse<GreetingsResult>> subscriptionStream 
+            };
+
+        IObservable<GraphQLResponse<GreetingsResult>> subscriptionStream
             = client.CreateSubscriptionStream<GreetingsResult>(request);
 
         var greetingsObserver = new GreetingsObserver();
@@ -167,16 +205,14 @@ json
                     ConnectionStatus.text = nameof(GraphQLWebsocketConnectionState.Connecting);
                     ConnectionStatus.color = Color.yellow;
                     break;
-
             }
         });
-
     }
 
     public class GreetingsObserver : IObserver<GraphQLResponse<GreetingsResult>>
     {
         public Action<float> OnSetValue;
-        
+
         public void OnCompleted()
         {
             Debug.Log("Completed");
@@ -193,11 +229,11 @@ json
             {
                 Debug.Log("Here");
                 Debug.Log(JsonUtility.ToJson(value?.Data?.Greetings));
-                if ( value?.Data?.Greetings.slider != 0)
+                if (value?.Data?.Greetings.slider != 0)
                 {
                     OnSetValue?.Invoke((float)value?.Data?.Greetings.slider);
                 }
-                else if ( value?.Data?.Greetings.json != null)
+                else if (value?.Data?.Greetings.json != null)
                 {
                     var jObject = JObject.Parse(value?.Data?.Greetings.json);
 
@@ -228,7 +264,7 @@ json
         {
             Server.text = _connectionManager.Server;
         }
-        
+
         Server.onEndEdit.AddListener(delegate
         {
             Uri uriResult;
@@ -238,7 +274,7 @@ json
             {
                 serverText = "http://" + serverText;
             }
-            
+
             if (Uri.TryCreate(serverText, UriKind.Absolute, out uriResult)
                 && (uriResult.Scheme == Uri.UriSchemeHttp || uriResult.Scheme == Uri.UriSchemeHttps))
             {
@@ -287,17 +323,10 @@ json
 
 public class GreetingsResult
 {
-    public Result Greetings;
+    public Types.Result Greetings;
 
     public override string ToString()
     {
         return JsonUtility.ToJson(Greetings);
     }
-}
-
-public class Result
-{
-    public int value;
-    public int slider;
-    public string json;
 }

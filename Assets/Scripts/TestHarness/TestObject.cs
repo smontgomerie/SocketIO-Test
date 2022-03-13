@@ -5,6 +5,7 @@ using GraphQL;
 using GraphQL.Client.Abstractions.Websocket;
 using GraphQL.Client.Http;
 using GraphQL.Client.Serializer.Newtonsoft;
+using Newtonsoft.Json.Linq;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
@@ -102,14 +103,21 @@ public class TestObject : MonoBehaviour
         {
             Query = @"
     subscription {
-        greetings
+        greetings {
+value
+slider
+json
+    }
     }"
         };
         
-        IObservable<GraphQLResponse<UserJoinedSubscriptionResult>> subscriptionStream 
-            = client.CreateSubscriptionStream<UserJoinedSubscriptionResult>(request);
+        IObservable<GraphQLResponse<GreetingsResult>> subscriptionStream 
+            = client.CreateSubscriptionStream<GreetingsResult>(request);
 
-        subscriptionStream.Subscribe(new TemperatureReporter());
+        var greetingsObserver = new GreetingsObserver();
+        greetingsObserver.OnSetValue += SetCubeValue;
+        greetingsObserver.OnJSONMessage += OnJSONMessage;
+        subscriptionStream.Subscribe(greetingsObserver);
 
         // graphQlRequest.OnSendMessage += LogItem;
         // graphQlRequest.OnSetValue += SetCubeValue;
@@ -165,8 +173,10 @@ public class TestObject : MonoBehaviour
 
     }
 
-    public class TemperatureReporter : IObserver<GraphQLResponse<UserJoinedSubscriptionResult>>
+    public class GreetingsObserver : IObserver<GraphQLResponse<GreetingsResult>>
     {
+        public Action<float> OnSetValue;
+        
         public void OnCompleted()
         {
             Debug.Log("Completed");
@@ -177,18 +187,30 @@ public class TestObject : MonoBehaviour
             Debug.LogException(error);
         }
 
-        public void OnNext(GraphQLResponse<UserJoinedSubscriptionResult> value)
+        public void OnNext(GraphQLResponse<GreetingsResult> value)
         {
             ExecuteOnMainThread.RunOnMainThread(() =>
             {
                 Debug.Log("Here");
-                Debug.Log(value?.Data?.Greetings);
+                Debug.Log(JsonUtility.ToJson(value?.Data?.Greetings));
+                if ( value?.Data?.Greetings.slider != 0)
+                {
+                    OnSetValue?.Invoke((float)value?.Data?.Greetings.slider);
+                }
+                else if ( value?.Data?.Greetings.json != null)
+                {
+                    var jObject = JObject.Parse(value?.Data?.Greetings.json);
+
+                    OnJSONMessage?.Invoke(jObject);
+                }
             });
         }
+
+        public event Action<JObject> OnJSONMessage;
     }
 
 
-    private void OnJSONMessage(Dictionary<string, string> obj)
+    private void OnJSONMessage(JObject obj)
     {
         ExecuteOnMainThread.RunOnMainThread(() =>
         {
@@ -263,7 +285,19 @@ public class TestObject : MonoBehaviour
     }
 }
 
-public class UserJoinedSubscriptionResult
+public class GreetingsResult
 {
-    public string Greetings;
+    public Result Greetings;
+
+    public override string ToString()
+    {
+        return JsonUtility.ToJson(Greetings);
+    }
+}
+
+public class Result
+{
+    public int value;
+    public int slider;
+    public string json;
 }

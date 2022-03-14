@@ -1,0 +1,34 @@
+version: '1'
+services:
+  iot-server:
+    container_name: "iot-server"
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    env_file: ../.env
+    environment: 
+      - MONGODB_CONNECTION_URI=mongodb://mongo/iot-server #override from localhost to the container name
+    ports:
+      - '4000:4000' #the websocket port
+      - '3001:3001' #the web port
+    networks:
+      - backend
+    depends_on:
+      - mongodb
+
+  mongodb:
+    container_name: "mongo"
+    image: mongo:latest
+    volumes:
+      - dbdata:/data/db
+    ports:
+      - '27017-27019:27017-27019'
+    networks:
+      - backend
+
+volumes:
+  dbdata:
+
+networks:
+  backend:
+  frontend:

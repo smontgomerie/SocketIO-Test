@@ -6,45 +6,24 @@ const httpServer = require("./httpServer.cjs");
 const {createServer} = require("http");
 const express = require("express");
 const {execute, subscribe} = require("graphql");
-const {ApolloServer, gql} = require("apollo-server-express");
+const {ApolloServer} = require("apollo-server-express");
 const {SubscriptionServer} = require("subscriptions-transport-ws");
 const {makeExecutableSchema} = require("@graphql-tools/schema");
 
-import {User} from "./src/user";
+import {findUser, validateToken} from "./src/auth";
+
 const {Result} = require("./src/generated/graphql");
 
 (async () => {
   const PORT = 4000;
   const app = express();
   const websocketServer = createServer(app);
-  const users = {};
 
   const schema = makeExecutableSchema({typeDefs, resolvers});
 
   const server = new ApolloServer({schema});
   await server.start();
   server.applyMiddleware({app});
-
-  const validateToken = (authToken) => {
-    // ... validate token and return a Promise, rejects in case of an error
-    return new Promise<boolean>((resolve, reject) => {
-      resolve(true);
-      return true;
-    });
-  }
-
-  const findUser = (authToken) => {
-    return (tokenValidationResult) => {
-      // ... finds user by auth token and return a Promise, rejects in case of an error
-      return new Promise<User>((resolve, reject) => {
-        resolve(users[authToken] ||  {
-          id: authToken,
-          description: "",
-          data: ""
-        });
-      });
-    }
-  }
 
   SubscriptionServer.create(
     {
@@ -62,24 +41,12 @@ const {Result} = require("./src/generated/graphql");
             .then(findUser(authToken))
             .then((user) => {
 
-              const socket = {
-                id: 0
-              }
-
-              httpServer.registerCallback(socket.id, (type, message) => {
-                const user: User = {
-                  id: authToken,
-                  description: "",
-                  data: ""
-                };
-
-                users[authToken] ||= user;
-
+              httpServer.registerCallback(authToken, (type, message) => {
                 if (type == 'chat') {
                   console.log("socket.emit web message " + message)
                   if (message.startsWith("set value")) {
                     // socket.emit("set value", message.substr("set value ".length));
-                    const result = {
+                    const result: typeof Result = {
                       value: message.substr("set value ".length),
                       slider: null,
                       json: null
@@ -94,32 +61,46 @@ const {Result} = require("./src/generated/graphql");
                   }
                 } else if (type == 'slider') {
                   console.log("socket.emit slider message " + message)
+                  let greetings: typeof Result = {
+                    value: "",
+                    slider: message,
+                    json: null
+                  };
                   pubsub.publish("GREETINGS", {
-                    greetings: {
-                      value: "",
-                      slider: message,
-                      json: null
-                    }
+                    greetings: greetings
                   });
                 } else if (type == 'json') {
                   console.log("socket.emit json message " + message)
                   // socket.emit("json", message);
+                  let result: typeof Result = {
+                    value: "",
+                    slider: 0,
+                    json: message
+                  };
                   pubsub.publish("GREETINGS", {
-                    greetings: {
-                      value: "",
-                      slider: 0,
-                      json: message
-                    }
+                    greetings: result
                   });
 
-
                   // Cache it
-                  users[authToken].data = message;
+                  user.data = message;
                 }
                 return {
                   currentUser: user,
                 };
               });
+
+              // Return previously cached data
+              if ( user.data != null ) {
+                let result: typeof Result = {
+                  value: "",
+                  slider: 0,
+                  json: user.data
+                };
+
+                pubsub.publish("GREETINGS", {
+                  greetings: result
+                });
+              }
             });
         }
 

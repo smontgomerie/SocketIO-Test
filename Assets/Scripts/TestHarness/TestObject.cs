@@ -154,6 +154,7 @@ json
 
         var greetingsObserver = new GreetingsObserver();
         greetingsObserver.OnSetValue += SetCubeValue;
+        greetingsObserver.OnSetStringValue += LogItem;
         greetingsObserver.OnJSONMessage += OnJSONMessage;
         subscriptionStream.Subscribe(greetingsObserver);
 
@@ -212,6 +213,7 @@ json
     public class GreetingsObserver : IObserver<GraphQLResponse<GreetingsResult>>
     {
         public Action<float> OnSetValue;
+        public Action<string> OnSetStringValue;
 
         public void OnCompleted()
         {
@@ -238,6 +240,10 @@ json
                     var jObject = JObject.Parse(value?.Data?.Greetings.json);
 
                     OnJSONMessage?.Invoke(jObject);
+                }
+                else if (value?.Data?.Greetings.value != null)
+                {
+                    OnSetStringValue?.Invoke(value?.Data?.Greetings.value);
                 }
             });
         }

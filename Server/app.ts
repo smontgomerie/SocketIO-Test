@@ -13,6 +13,7 @@ const {makeExecutableSchema} = require("@graphql-tools/schema");
 import {findUser, validateToken} from "./src/auth";
 
 const {Result} = require("./src/generated/graphql");
+const {mqtt_pubsub} = require("./src/mqtt");
 
 (async () => {
   const PORT = 4000;
@@ -90,7 +91,7 @@ const {Result} = require("./src/generated/graphql");
               });
 
               // Return previously cached data
-              if ( user.data != null ) {
+              if (user.data != null) {
                 let result: typeof Result = {
                   value: "",
                   slider: 0,
@@ -101,6 +102,23 @@ const {Result} = require("./src/generated/graphql");
                   greetings: result
                 });
               }
+
+              mqtt_pubsub.subscribe("MQTT", payload=> {
+                console.log("mqtt message " + payload);
+
+                let result: typeof Result = {
+                  value: payload.toString(),
+                  slider: 0,
+                  json: null
+                };
+
+                pubsub.publish("GREETINGS", {
+                  greetings: result
+                });
+              }).then(() => {
+                return console.log("MQTT subscribed");
+              });
+
             });
         }
 

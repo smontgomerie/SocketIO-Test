@@ -1,0 +1,39 @@
+<linker>
+    <assembly fullname="System">
+        <namespace fullname="System.Runtime.InteropServices" preserve="all"/>
+        <namespace fullname="System.Collections.Generic;" preserve="all"/>
+        <namespace fullname="System.Linq;" preserve="all"/>
+        <namespace fullname="System.Text.RegularExpressions;" preserve="all"/>
+        <namespace fullname="System.IO;" preserve="all"/>
+        <namespace fullname="System;" preserve="all"/>
+        <namespace fullname="System.ComponentModel;" preserve="all"/>
+
+        <type fullname="System.ComponentModel.TypeConverter" preserve="all"/>
+        <type fullname="System.ComponentModel.ReferenceConverter" preserve="all"/>
+
+    </assembly>
+
+    <assembly fullname="GraphQL.Client" preserve="all">
+        <type fullname="*" preserve="all"/>
+        
+        <namespace fullname="GraphQL.Client" preserve="all"/>    
+        <type fullname="GraphQL.Client.*" preserve="all"/>    
+        <type fullname="GraphQL.Client.Abstractions.Websocket" preserve="all"/>    
+        <type fullname="GraphQL.Client.Abstractions.Websocket.*" preserve="all"/>    
+        <type fullname="GraphQL.Client.Abstractions.*" preserve="all"/>    
+    </assembly>
+    
+    <assembly fullname="System.Reactive" preserve="all">
+        <type fullname="*" preserve="all"/> 
+
+        <namespace fullname="System.Reactive" preserve="all"/>
+        <namespace fullname="System.Reactive.*" preserve="all"/>
+        <namespace fullname="System.Reactive.Linq" preserve="all"/>
+        <namespace fullname="System.Reactive.Linq.*" preserve="all"/>
+        <namespace fullname="System.Reactive.Concurrency" preserve="all"/>
+        <namespace fullname="System.Reactive.Concurrency.*" preserve="all"/>
+        
+        <type fullname="System.Reactive.Concurrency.Scheduler" preserve="all"/>
+        <type fullname="System.Reactive.Concurrency.CurrentThreadScheduler" preserve="all"/>
+    </assembly>
+</linker>

@@ -9,7 +9,9 @@ using GraphQL;
 using GraphQL.Client.Abstractions.Websocket;
 using GraphQL.Client.Http;
 using GraphQL.Client.Serializer.Newtonsoft;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using UniRx;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
@@ -127,7 +129,10 @@ public class TestObject : MonoBehaviour
             EndPoint = new Uri(server),
             // HttpMessageHandler = httpMessageHandler,
             ConfigureWebsocketOptions =
-                (options) => { options.SetRequestHeader("Authorization", "Bearer " + AuthToken); }
+                (options) =>
+                {
+                    options.SetRequestHeader("Authorization", "Bearer " + AuthToken);
+                }
         };
         // HttpClient httpClient = new HttpClient(httpMessageHandler);
         // httpClient.DefaultRequestHeaders.Add("Authorization", "Bearer " + AuthToken);
@@ -149,7 +154,7 @@ json
     }"
             };
 
-        IObservable<GraphQLResponse<GreetingsResult>> subscriptionStream
+        UniRx.IObservable<GraphQLResponse<GreetingsResult>> subscriptionStream
             = client.CreateSubscriptionStream<GreetingsResult>(request);
 
         var greetingsObserver = new GreetingsObserver();
@@ -210,7 +215,7 @@ json
         });
     }
 
-    public class GreetingsObserver : IObserver<GraphQLResponse<GreetingsResult>>
+    public class GreetingsObserver : UniRx.IObserver<GraphQLResponse<GreetingsResult>>
     {
         public Action<float> OnSetValue;
         public Action<string> OnSetStringValue;
@@ -229,8 +234,8 @@ json
         {
             ExecuteOnMainThread.RunOnMainThread(() =>
             {
-                Debug.Log("Here");
-                Debug.Log(JsonUtility.ToJson(value?.Data?.Greetings));
+                // Debug.Log("Here");
+                Debug.Log(value?.Data?.ToString());
                 if (value?.Data?.Greetings.slider != 0)
                 {
                     OnSetValue?.Invoke((float)value?.Data?.Greetings.slider);
@@ -259,7 +264,16 @@ json
             foreach (var key in obj)
             {
                 var i = Array.IndexOf(BarChartManager.BarLabel, key.Key);
-                BarChartManager.SetBarSize(key.Key, Convert.ToSingle(key.Value));
+                if (i >= 0)
+                {
+                    try
+                    {
+                        BarChartManager.SetBarSize(key.Key, Convert.ToSingle(key.Value));
+                    }
+                    catch (FormatException e)
+                    {
+                    }
+                }
             }
         });
     }
@@ -333,6 +347,6 @@ public class GreetingsResult
 
     public override string ToString()
     {
-        return JsonUtility.ToJson(Greetings);
+        return JsonConvert.SerializeObject(Greetings);
     }
 }

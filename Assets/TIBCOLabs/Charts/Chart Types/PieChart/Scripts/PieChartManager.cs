@@ -34,8 +34,9 @@ public class PieChartManager : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        var scale = transform.localScale.x / (2.5f+ SlicesSize);
-        var scale_y = transform.localScale.y;
+        var localScale = transform.localScale;
+        var scale = localScale.x / (2.5f+ SlicesSize);
+        var scale_y = localScale.y;
 
         int slice = 0;
         for (int i = 0; i < numberOfSlices; i++)
@@ -44,7 +45,7 @@ public class PieChartManager : MonoBehaviour
             float x = Mathf.Cos(angle) * scale;
             //float z = Mathf.Tan(angle) * radius;
             float y = Mathf.Sin(angle) * scale;
-            Vector3 pos = transform.position + new Vector3(x,y, 0);
+            Vector3 pos = transform.rotation * new Vector3(x,y, 0) + transform.position;
             float angleDegrees = angle * Mathf.Rad2Deg;
             Quaternion rotation = Quaternion.Euler(0, 0, angleDegrees);
             var spliceObj = Instantiate(PiePrefab, pos, rotation);

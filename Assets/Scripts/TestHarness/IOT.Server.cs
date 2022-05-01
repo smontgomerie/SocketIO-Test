@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using Newtonsoft.Json;
 
 namespace GraphQLCodeGen {
@@ -20,6 +18,12 @@ namespace GraphQLCodeGen {
         #region Result
         public class Result {
             #region members
+            [JsonProperty("dataType")]
+            public string dataType { get; set; }
+    
+            [JsonProperty("id")]
+            public string id { get; set; }
+    
             [JsonProperty("json")]
             public string json { get; set; }
     
@@ -45,4 +49,7 @@ namespace GraphQLCodeGen {
         #endregion
     }
   
+}
+
+namespace GraphQLCodeGen {
 }

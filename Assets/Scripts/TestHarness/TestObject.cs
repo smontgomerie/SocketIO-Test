@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data.Common;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading;
@@ -28,6 +29,7 @@ public class TestObject : MonoBehaviour
     public InputField Server;
     public Text ConnectionStatus;
     public BarChartManager BarChartManager;
+    public PieChartManager PieChartManager;
 
     private void Awake()
     {
@@ -121,6 +123,35 @@ public class TestObject : MonoBehaviour
 
     private void InitSocketManager(string server)
     {
+        void CreateSubscription(GraphQLHttpClient graphQlHttpClient, string dataType)
+        {
+            var jsonTypeRequest = new GraphQLRequest
+            {
+                Query = @"
+    subscription($dataType:String)  {
+  greetings(dataType:$dataType) {
+    value
+    slider
+    json
+  }
+}
+",
+                Variables = new
+                {
+                    dataType = dataType
+                }
+            };
+
+            UniRx.IObservable<GraphQLResponse<GreetingsResult>> subscriptionStream
+                = graphQlHttpClient.CreateSubscriptionStream<GreetingsResult>(jsonTypeRequest);
+
+            var greetingsObserver = new GreetingsObserver();
+            greetingsObserver.OnSetValue += SetCubeValue;
+            greetingsObserver.OnSetStringValue += LogItem;
+            greetingsObserver.OnJSONMessage += OnJSONMessage;
+            subscriptionStream.Subscribe(greetingsObserver);
+        }
+
         var AuthToken = "abcd";
         // var httpMessageHandler = new MyHandler(AuthToken);
         // httpMessageHandler.Credentials = new NetworkCredential("test", "password");
@@ -141,56 +172,16 @@ public class TestObject : MonoBehaviour
             new GraphQLHttpClient(options, new NewtonsoftJsonSerializer());
         client.HttpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {AuthToken}");
         client.WebsocketConnectionState.Subscribe(ConnectionStateChange);
+        client.WebSocketReceiveErrors.Subscribe(Debug.LogError);
         
-            var request = new GraphQLRequest
-            {
-                Query = @"
-    subscription {
-        greetings {
-value
-slider
-json
-    }
-    }"
-            };
-
-        UniRx.IObservable<GraphQLResponse<GreetingsResult>> subscriptionStream
-            = client.CreateSubscriptionStream<GreetingsResult>(request);
-
-        var greetingsObserver = new GreetingsObserver();
-        greetingsObserver.OnSetValue += SetCubeValue;
-        greetingsObserver.OnSetStringValue += LogItem;
-        greetingsObserver.OnJSONMessage += OnJSONMessage;
-        subscriptionStream.Subscribe(greetingsObserver);
-
-        // graphQlRequest.OnSendMessage += LogItem;
-        // graphQlRequest.OnSetValue += SetCubeValue;
-        // graphQlRequest.OnJSONMessage += OnJSONMessage;
-        // graphQlRequest.OnConnected += () =>
-        // {
-        //     ExecuteOnMainThread.RunOnMainThread(() =>
-        //     {
-        //         ConnectionStatus.text = "Connected";
-        //         ConnectionStatus.color = Color.green;
-        //     });
-        // };
-        // graphQlRequest.OnDisconnected += () =>
-        // {
-        //     ExecuteOnMainThread.RunOnMainThread(() =>
-        //     {
-        //         ConnectionStatus.text = "Disconnected";
-        //         ConnectionStatus.color = Color.red;
-        //     });
-        // };
-        // graphQlRequest.OnReconnecting += () =>
-        // {
-        //     ExecuteOnMainThread.RunOnMainThread(() =>
-        //     {
-        //         ConnectionStatus.text = "Reconnecting...";
-        //         ConnectionStatus.color = Color.yellow;
-        //     });
-        //     
-        // };
+        CreateSubscription(client, "slider");
+        
+        var client2 =
+            new GraphQLHttpClient(options, new NewtonsoftJsonSerializer());
+        client2.HttpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {AuthToken}");
+        client2.WebsocketConnectionState.Subscribe(ConnectionStateChange);
+        client2.WebSocketReceiveErrors.Subscribe(Debug.LogError);
+            CreateSubscription(client2, "JSON");
     }
 
     private void ConnectionStateChange(GraphQLWebsocketConnectionState obj)
@@ -234,9 +225,11 @@ json
         {
             ExecuteOnMainThread.RunOnMainThread(() =>
             {
-                // Debug.Log("Here");
-                Debug.Log(value?.Data?.ToString());
-                if (value?.Data?.Greetings.slider != 0)
+                Debug.Log("OnNext");
+                if (value.Errors != null)
+                    Debug.Log("Errors: " + value.Errors.Select(e => e.Message).Aggregate((a, b) => a + " " + b));
+                Debug.Log("Data: " + value?.Data?.ToString());
+                if (value?.Data?.Greetings.slider != 0 && value?.Data?.Greetings.slider != null)
                 {
                     OnSetValue?.Invoke((float)value?.Data?.Greetings.slider);
                 }
@@ -263,7 +256,7 @@ json
         {
             foreach (var key in obj)
             {
-                var i = Array.IndexOf(BarChartManager.BarLabel, key.Key);
+                var i = Array.FindIndex(BarChartManager.BarLabel, x => x.ToLower().Equals(key.Key));
                 if (i >= 0)
                 {
                     try
@@ -274,6 +267,14 @@ json
                     {
                     }
                 }
+            }
+
+            if (obj.ContainsKey("pie_chart"))
+            {
+                var value = obj["pie_chart"];
+                var single = Convert.ToSingle(value);
+                PieChartManager.SetPieSize(0, single);;
+                PieChartManager.SetPieSize(1, PieChartManager.numberOfSlices - single);;
             }
         });
     }
